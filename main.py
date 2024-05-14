@@ -158,7 +158,11 @@ class EmotionLSTM(nn.Module):
         self.conv2Dblock = nn.Sequential(
             # 1. conv block
             nn.Conv2d(
-                in_channels=1, out_channels=16, kernel_size=3, stride=1, padding=1
+                in_channels=1,
+                out_channels=16,
+                kernel_size=3,
+                stride=1,
+                padding=1,
             ),
             nn.BatchNorm2d(16),
             nn.ReLU(),
@@ -166,7 +170,11 @@ class EmotionLSTM(nn.Module):
             nn.Dropout(p=0.3),
             # 2. conv block
             nn.Conv2d(
-                in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1
+                in_channels=16,
+                out_channels=32,
+                kernel_size=3,
+                stride=1,
+                padding=1,
             ),
             nn.BatchNorm2d(32),
             nn.ReLU(),
@@ -174,7 +182,11 @@ class EmotionLSTM(nn.Module):
             nn.Dropout(p=0.3),
             # 3. conv block
             nn.Conv2d(
-                in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1
+                in_channels=32,
+                out_channels=64,
+                kernel_size=3,
+                stride=1,
+                padding=1,
             ),
             nn.BatchNorm2d(64),
             nn.ReLU(),
@@ -182,7 +194,11 @@ class EmotionLSTM(nn.Module):
             nn.Dropout(p=0.3),
             # 4. conv block
             nn.Conv2d(
-                in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1
+                in_channels=64,
+                out_channels=64,
+                kernel_size=3,
+                stride=1,
+                padding=1,
             ),
             nn.BatchNorm2d(64),
             nn.ReLU(),
@@ -193,28 +209,29 @@ class EmotionLSTM(nn.Module):
         self.lstm_maxpool = nn.MaxPool2d(kernel_size=[2, 4], stride=[2, 4])
         hidden_size = 128
         self.lstm = nn.LSTM(
-            input_size=64, hidden_size=hidden_size, bidirectional=True, batch_first=True
+            input_size=64,
+            hidden_size=hidden_size,
+            bidirectional=True,
+            batch_first=True,
         )
         self.dropout_lstm = nn.Dropout(0.1)
         self.attention_linear = nn.Linear(
-            2 * hidden_size, 1
-        )  # 2*hidden_size for the 2 outputs of bidir LSTM
+            2 * hidden_size,
+            1,
+        )
         # Linear softmax layer
         self.out_linear = nn.Linear(2 * hidden_size + 256, num_of_emotions)
         self.dropout_linear = nn.Dropout(p=0)
         self.out_softmax = nn.Softmax(dim=1)
 
-    def forward(self, x):
-        # conv embedding
-        conv_embedding = self.conv2Dblock(x)  # (b,channel,freq,time)
-        conv_embedding = torch.flatten(
-            conv_embedding, start_dim=1
-        )  # do not flatten batch dimension
-        # lstm embedding
+    def forward(self, x: torch.Tensor):
+        conv_embedding = self.conv2Dblock(x)
+        conv_embedding = torch.flatten(conv_embedding, start_dim=1)
+
         x_reduced = self.lstm_maxpool(x)
         x_reduced = torch.squeeze(x_reduced, 1)
-        x_reduced = x_reduced.permute(0, 2, 1)  # (b,t,freq)
-        lstm_embedding, (h, c) = self.lstm(x_reduced)  # (b, time, hidden_size*2)
+        x_reduced = x_reduced.permute(0, 2, 1)
+        lstm_embedding, (h, c) = self.lstm(x_reduced)
         lstm_embedding = self.dropout_lstm(lstm_embedding)
         batch_size, T, _ = lstm_embedding.shape
         attention_weights = [None] * T
@@ -224,11 +241,8 @@ class EmotionLSTM(nn.Module):
         attention_weights_norm = nn.functional.softmax(
             torch.stack(attention_weights, -1), -1
         )
-        attention = torch.bmm(
-            attention_weights_norm, lstm_embedding
-        )  # (Bx1xT)*(B,T,hidden_size*2)=(B,1,2*hidden_size)
+        attention = torch.bmm(attention_weights_norm, lstm_embedding)
         attention = torch.squeeze(attention, 1)
-        # concatenate
         complete_embedding = torch.cat([conv_embedding, attention], dim=1)
 
         output_logits = self.out_linear(complete_embedding)
@@ -261,13 +275,13 @@ def train(
     X_val: pd.DataFrame,
     Y_val: np.ndarray,
 ):
-    EPOCHS = 20
+    EPOCHS = 1500
     BATCH_SIZE = 32
     DATASET_SIZE = xtrain_data.shape[0]
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
     model = EmotionLSTM(num_of_emotions=len(EMOTIONS))
-
+    model.to(device)
     optimizer = torch.optim.SGD(
         model.parameters(), lr=0.01, weight_decay=1e-3, momentum=0.8
     )
@@ -294,16 +308,15 @@ def train(
             actual_batch_size = batch_end - batch_start
             X = train_xdata[batch_start:batch_end, :, :, :]
             Y = ytrain_data[batch_start:batch_end]
-            X_tensor = torch.tensor(X, device=device).float()
+            X_tensor = torch.tensor(X, dtype=torch.float, device=device)
             Y_tensor = torch.tensor(Y, dtype=torch.long, device=device)
-
             loss, acc = train_step(X_tensor, Y_tensor)
             epoch_acc += acc * actual_batch_size / train_xdata.shape[0]
             epoch_loss += loss * actual_batch_size / train_xdata.shape[0]
             print(f"\r Epoch {epoch}: iteration {i}/{iters}", end="")
 
-        X_val_tensor = torch.tensor(X_val, device=device).float()
-        Y_val_tensor = torch.tensor(Y_val, dtype=torch.long, device=device)
+        X_val_tensor = torch.tensor(X_val, device=device, dtype=torch.float)
+        Y_val_tensor = torch.tensor(Y_val, device=device, dtype=torch.long)
         val_loss, val_acc, _ = validate(X_val_tensor, Y_val_tensor)
         losses.append(epoch_loss)
         val_losses.append(val_loss)
@@ -318,12 +331,15 @@ def train(
 def save_model(model):
     MODEL_PATH = os.path.join(os.getcwd(), "models")
     os.makedirs("models", exist_ok=True)
-    torch.save(model.state_dic().os.path.join(MODEL_PATH, "emotion_lstm.pt"))
+    torch.save(model.state_dict(), os.path.join(MODEL_PATH, "emotion_lstm.pt"))
     print("model saved")
 
 
-DATA_PATH = "/Users/salihbozkaya/ai/emotion_lstm/data"
 if __name__ == "__main__":
-    df = prep_data(DATA_PATH)
-    X_train, Y_train, X_val, Y_val, X_test, Y_test = split_data(df)
-    train(X_train, tokenize(Y_train), X_val, tokenize(Y_val))
+    DATA_PATH = os.getenv("DATA_PATH")
+    if DATA_PATH is None:
+        print("DATA_PATH should be given")
+    else:
+        df = prep_data(DATA_PATH)
+        X_train, Y_train, X_val, Y_val, X_test, Y_test = split_data(df)
+        train(X_train, tokenize(Y_train), X_val, tokenize(Y_val))
