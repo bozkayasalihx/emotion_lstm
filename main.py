@@ -106,6 +106,7 @@ def split_data(data: pd.DataFrame):
 
 def tokenize(data: pd.DataFrame):
     EMOTIONS = {
+        "suprise": 0,
         "neural": 1,
         "calm": 2,
         "happy": 3,
@@ -113,7 +114,6 @@ def tokenize(data: pd.DataFrame):
         "angry": 5,
         "fear": 6,
         "disgust": 7,
-        "suprise": 0,
     }
     data.loc[:, ("emotion")] = data.loc[:, ("emotion")].apply(
         lambda x: 0 if EMOTIONS[x] == 8 else EMOTIONS[x]
@@ -220,35 +220,26 @@ class EmotionLSTM(nn.Module):
             1,
         )
         # Linear softmax layer
-        self.out_linear = nn.Linear(2 * hidden_size + 256, num_of_emotions)
+        self.out_linear = nn.Linear(4 * hidden_size, num_of_emotions)
         self.dropout_linear = nn.Dropout(p=0)
         self.out_softmax = nn.Softmax(dim=1)
 
     def forward(self, x: torch.Tensor):
         conv_embedding = self.conv2Dblock(x)
         conv_embedding = torch.flatten(conv_embedding, start_dim=1)
-
         x_reduced = self.lstm_maxpool(x)
         x_reduced = torch.squeeze(x_reduced, 1)
         x_reduced = x_reduced.permute(0, 2, 1)
         lstm_embedding, (h, c) = self.lstm(x_reduced)
-        lstm_embedding = self.dropout_lstm(lstm_embedding)
-        batch_size, T, _ = lstm_embedding.shape
-        attention_weights = [None] * T
-        for t in range(T):
-            embedding = lstm_embedding[:, t, :]
-            attention_weights[t] = self.attention_linear(embedding)
-        attention_weights_norm = nn.functional.softmax(
-            torch.stack(attention_weights, -1), -1
-        )
-        attention = torch.bmm(attention_weights_norm, lstm_embedding)
+        attention_weights = torch.stack([self.attention_linear(lstm_embedding[:, t, :]) for t in range(lstm_embedding.size(1))], dim=1)
+        attention_weights_norm = nn.functional.softmax(attention_weights, dim=1)
+        attention = torch.bmm(attention_weights_norm.permute(0, 2, 1), lstm_embedding)
         attention = torch.squeeze(attention, 1)
         complete_embedding = torch.cat([conv_embedding, attention], dim=1)
-
         output_logits = self.out_linear(complete_embedding)
-        output_logits = self.dropout_linear(output_logits)
         output_softmax = self.out_softmax(output_logits)
         return output_logits, output_softmax, attention_weights_norm
+
 
 
 def transform_data(data: pd.DataFrame):
@@ -275,7 +266,7 @@ def train(
     X_val: pd.DataFrame,
     Y_val: np.ndarray,
 ):
-    EPOCHS = 1500
+    EPOCHS = 15000
     BATCH_SIZE = 32
     DATASET_SIZE = xtrain_data.shape[0]
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -283,7 +274,8 @@ def train(
     model = EmotionLSTM(num_of_emotions=len(EMOTIONS))
     model.to(device)
     optimizer = torch.optim.SGD(
-        model.parameters(), lr=0.01, weight_decay=1e-3, momentum=0.8
+        model.parameters(), lr=0.01, 
+        # weight_decay=1e-3, momentum=0.8
     )
 
     train_step = make_train_step(model, loss_fnc=loss_function, optimizer=optimizer)
@@ -342,4 +334,4 @@ if __name__ == "__main__":
     else:
         df = prep_data(DATA_PATH)
         X_train, Y_train, X_val, Y_val, X_test, Y_test = split_data(df)
-        train(X_train, tokenize(Y_train), X_val, tokenize(Y_val))
+        train(X_train, tokenize(Y_train), X_val, tokenize(Y_val));
