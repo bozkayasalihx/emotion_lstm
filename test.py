@@ -2,7 +2,7 @@
 
 from encoder import encode
 from model import EmotionLSTM
-from utils import EMOTIONS, get_device
+from utils import EMOTIONS, extract_mfcc, get_device
 from model import loss_function
 from train import prep_data, split_data, make_validate_fnc, transform_data
 import torch
@@ -22,24 +22,34 @@ def load_model(device: str):
     return model
 
 
-if __name__ == "__main__":
-    DATA_PATH = os.getenv("DATA_PATH")
+def test(test_path: str):
     device = get_device()
-    df = prep_data(DATA_PATH)
-    splitedDf = split_data(df)
+    if device == "cuda":
+        torch.cuda.empty_cache()
 
-    X_test = splitedDf[0]
-    Y_test = splitedDf[1]
-    model = load_model(device)
+    df = prep_data(test_path)
+    print(df.shape)
+    print(df)
 
+    df["data"] = df["path"].apply(lambda x: extract_mfcc(file_path=x, sr=48000))
+
+    model = load_model("cpu")
     model.eval()
-    model.to(device)
+    # model.to("cpu")
+
     validate = make_validate_fnc(model, loss_function)
-    X_test_tensor = torch.tensor(
-        transform_data(X_test), device=device, dtype=torch.float
+    X_test_tensor = torch.tensor(transform_data(df), device="cpu", dtype=torch.float)
+    Y_test_tensor = torch.tensor(
+        encode(df[["emotion"]]), dtype=torch.long, device="cpu"
     )
-    Y_test_tensor = torch.tensor(encode(Y_test), dtype=torch.long, device=device)
 
     test_loss, test_acc, _ = validate(X_test_tensor, Y_test_tensor)
+    return test_loss, test_acc
+
+
+if __name__ == "__main__":
+    test_path = os.getenv("TEST_PATH")
+    print("test path", test_path);
+    test_loss, test_acc = test(test_path)
     print(f"Test loss is {test_loss:.3f}")
     print(f"Test accuracy is {test_acc:.2f}%")
