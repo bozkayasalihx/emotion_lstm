@@ -110,6 +110,7 @@ def train(
     X_val: pd.DataFrame,
     Y_val: np.ndarray,
 ):
+
     DATASET_SIZE = xtrain_data.shape[0]
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
@@ -179,5 +180,5 @@ if __name__ == "__main__":
         print("DATA_PATH should be given")
     else:
         df = prep_data(DATA_PATH)
-        X_train, Y_train, X_val, Y_val, X_test, Y_test = split_data(df)
+        X_train, Y_train, X_val, Y_val, *_ = split_data(df)
         train(X_train, encoder.encode(Y_train), X_val, encoder.encode(Y_val))
