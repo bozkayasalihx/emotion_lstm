@@ -53,6 +53,9 @@ def prep_data(file_path: str):
     data = []
     for dir in os.listdir(file_path):
         each_audio_path = os.path.join(file_path, dir)
+        if os.path.isfile(each_audio_path):
+            continue
+
         for audio_path in os.listdir(each_audio_path):
             full_path = os.path.join(each_audio_path, audio_path)
             path_prefix = audio_path.split(".")[0].split("-")

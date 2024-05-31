@@ -23,19 +23,13 @@ def load_model(device: str):
 
 
 def test(test_path: str):
-    device = get_device()
-    if device == "cuda":
-        torch.cuda.empty_cache()
-
     df = prep_data(test_path)
-    print(df.shape)
-    print(df)
-
     df["data"] = df["path"].apply(lambda x: extract_mfcc(file_path=x, sr=48000))
 
     model = load_model("cpu")
+
+    # model'i eval moda olmali
     model.eval()
-    # model.to("cpu")
 
     validate = make_validate_fnc(model, loss_function)
     X_test_tensor = torch.tensor(transform_data(df), device="cpu", dtype=torch.float)
@@ -49,7 +43,6 @@ def test(test_path: str):
 
 if __name__ == "__main__":
     test_path = os.getenv("TEST_PATH")
-    print("test path", test_path);
     test_loss, test_acc = test(test_path)
     print(f"Test loss is {test_loss:.3f}")
     print(f"Test accuracy is {test_acc:.2f}%")
