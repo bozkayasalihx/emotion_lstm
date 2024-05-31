@@ -101,7 +101,7 @@ def make_train_step(model, loss_fnc, optimizer):
 
     return train_step
 
-EPOCHS = 1500
+EPOCHS = 512
 BATCH_SIZE = 32
 
 def train(
