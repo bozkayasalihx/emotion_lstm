@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 
+
 def encode(data: pd.DataFrame):
     EMOTIONS = {
         "suprise": 0,
@@ -16,3 +17,4 @@ def encode(data: pd.DataFrame):
         lambda x: 0 if EMOTIONS[x] == 8 else EMOTIONS[x]
     )
     return np.array(data.to_numpy().reshape((data.shape[0],)), dtype=np.int8)
+

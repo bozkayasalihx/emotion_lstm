@@ -4,6 +4,23 @@ import numpy as np
 import os
 
 
+EMOTIONS = {
+    1: "neural",
+    2: "calm",
+    3: "happy",
+    4: "sad",
+    5: "angry",
+    6: "fear",
+    7: "disgust",
+    0: "suprise",
+}
+
+EMOTION_INTENSITY = {
+    1: "normal",
+    2: "strong",
+}
+
+
 def get_device() -> str:
     device = "cpu"
     if torch.cuda.is_available():
@@ -49,3 +66,5 @@ def save_model(model):
     os.makedirs("models", exist_ok=True)
     torch.save(model.state_dict(), os.path.join(MODEL_PATH, "emotion_lstm.pt"))
     print("model saved")
+
+

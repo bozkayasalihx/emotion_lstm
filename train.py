@@ -4,46 +4,13 @@ import os
 import pandas as pd
 import numpy as np
 import torch
+from utils import  save_model, extract_mfcc, extract_mel_spectogram, EMOTIONS, EMOTION_INTENSITY
 from model import EmotionLSTM, loss_function
-from utils import  save_model, extract_mfcc, extract_mel_spectogram
 import encoder
 
-EMOTIONS = {
-    1: "neural",
-    2: "calm",
-    3: "happy",
-    4: "sad",
-    5: "angry",
-    6: "fear",
-    7: "disgust",
-    0: "suprise",
-}
-EMOTION_INTENSITY = {
-    1: "normal",
-    2: "strong",
-}
 
 SAMPLE_RATE = 48000
 RANDOM_STATE = 42
-
-
-def prep_data(file_path: str):
-    data = []
-    for dir in os.listdir(file_path):
-        each_audio_path = os.path.join(file_path, dir)
-        for audio_path in os.listdir(each_audio_path):
-            full_path = os.path.join(each_audio_path, audio_path)
-            path_prefix = audio_path.split(".")[0].split("-")
-            emotion = int(path_prefix[2])
-            emotion_intense = EMOTION_INTENSITY[int(path_prefix[3])]
-            if emotion == 8:
-                emotion = 0
-            gender = "female" if int(path_prefix[6]) % 2 == 0 else "male"
-            data.append([EMOTIONS[emotion], emotion_intense, gender, full_path])
-    return pd.DataFrame(
-        data,
-        columns=["emotion", "emotion_intensity", "gender", "path"],
-    )
 
 def split_data(data: pd.DataFrame):
     X_train = data.sample(n=1150, random_state=RANDOM_STATE)
@@ -79,6 +46,27 @@ def transform_data(data: pd.DataFrame):
     mel_data = np.reshape(mel_data, newshape=(b, c, h, w))
 
     return mel_data
+
+
+
+def prep_data(file_path: str):
+    data = []
+    for dir in os.listdir(file_path):
+        each_audio_path = os.path.join(file_path, dir)
+        for audio_path in os.listdir(each_audio_path):
+            full_path = os.path.join(each_audio_path, audio_path)
+            path_prefix = audio_path.split(".")[0].split("-")
+            emotion = int(path_prefix[2])
+            emotion_intense = EMOTION_INTENSITY[int(path_prefix[3])]
+            if emotion == 8:
+                emotion = 0
+            gender = "female" if int(path_prefix[6]) % 2 == 0 else "male"
+            data.append([EMOTIONS[emotion], emotion_intense, gender, full_path])
+    return pd.DataFrame(
+        data,
+        columns=["emotion", "emotion_intensity", "gender", "path"],
+    )
+
 
 
 def make_validate_fnc(model, loss_fnc):
