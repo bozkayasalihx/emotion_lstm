@@ -160,6 +160,7 @@ class Trainer(Utils):
             # if epoch reaches 0.001 before than epoch iteracton it will break
             if epoch_loss <= 1e-3:
                 break
+
         # print("saving model")
         # save_model(model)
 
@@ -169,10 +170,6 @@ if __name__ == "__main__":
     if DATA_PATH is None:
        print("DATA_PATH should be given")
     else:
-        # df = prep_data(DATA_PATH)
-        # X_train, Y_train, X_val, Y_val, *_ = split_data(df)
-        # train(X_train, encoder.encode(Y_train), X_val, encoder.encode(Y_val))
-
         ### should take model and data path
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
