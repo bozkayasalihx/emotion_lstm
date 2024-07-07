@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import numpy as np
 import torch
+from tqdm import tqdm
 from utils import Utils, EMOTIONS, EMOTION_INTENSITY
 from model import loss_function, EmotionLSTM
 import encoder
@@ -132,7 +133,7 @@ class Trainer(Utils):
             epoch_loss = 0
 
             iters = int(DATASET_SIZE / batch_size)
-            for i in range(iters):
+            for i in tqdm(range(iters)):
                 ## linear data frame icinde `BATCH_SIZE` stride seklinde atlayarak gider
                 batch_start = i * batch_size
                 batch_end = min(batch_start + batch_size, DATASET_SIZE)
@@ -143,15 +144,15 @@ class Trainer(Utils):
                 X = x_train[batch_start:batch_end, :, :, :]
                 Y = ytrain_data[batch_start:batch_end]
 
-                X_tensor = torch.tensor(X, dtype=torch.float, device=device)
-                Y_tensor = torch.tensor(Y, dtype=torch.long, device=device)
+                X_tensor = torch.tensor(X, dtype=torch.float, device=torch.device(device))
+                Y_tensor = torch.tensor(Y, dtype=torch.long, device=torch.device(device))
 
                 loss, acc = train_step(X_tensor, Y_tensor)
                 epoch_acc += acc * actual_batch_size / x_train.shape[0]
                 epoch_loss += loss * actual_batch_size / x_train.shape[0]
 
-            X_val_tensor = torch.tensor(X_val, device=device, dtype=torch.float)
-            Y_val_tensor = torch.tensor(self.Y_val, device=device, dtype=torch.long)
+            X_val_tensor = torch.tensor(X_val, device=torch.device(device), dtype=torch.float)
+            Y_val_tensor = torch.tensor(self.Y_val, device=torch.device(device), dtype=torch.long)
             val_loss, val_acc, _ = validate(X_val_tensor, Y_val_tensor)
             losses.append(epoch_loss)
             val_losses.append(val_loss)
@@ -185,4 +186,4 @@ if __name__ == "__main__":
 
         trainer = Trainer(model=model, optimizer=optimizer);
         trainer.prep_data(file_path=DATA_PATH)
-        trainer.train()
+        trainer.train(epochs=512, batch_size=32, device=device)
