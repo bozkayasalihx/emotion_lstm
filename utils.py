@@ -21,7 +21,7 @@ EMOTION_INTENSITY = {
 }
 
 class Utils():
-
+    
     @staticmethod
     def get_devices() -> str:
         devices = "cpu"

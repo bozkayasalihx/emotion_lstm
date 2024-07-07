@@ -4,7 +4,6 @@ import os
 import pandas as pd
 import numpy as np
 import torch
-import encoder
 from utils import Utils, EMOTIONS, EMOTION_INTENSITY
 from model import loss_function, EmotionLSTM
 import encoder
@@ -24,6 +23,9 @@ class Trainer(Utils):
         self.optim = optimizer
 
     def prep_data(self, file_path: str):
+        if file_path is None:
+            return "file path must not be empty";
+
         data = []
         for dir in os.listdir(file_path):
             each_audio_path = os.path.join(file_path, dir)
@@ -108,9 +110,9 @@ class Trainer(Utils):
 
 
 
-    def train(self):
-        DATASET_SIZE = self.X_train.shape[0]
+    def train(self, epochs=512, batch_size=32, device=str):
 
+        DATASET_SIZE = self.X_train.shape[0]
 
         train_step = self.make_train_step(loss_fnc=loss_function, optimizer=self.optim)
         validate = self.make_validate_fnc(loss_fnc=loss_function)
@@ -121,7 +123,7 @@ class Trainer(Utils):
 
         print("running")
 
-        for epoch in range(EPOCHS):
+        for epoch in range(epochs):
             idx = np.random.permutation(DATASET_SIZE)
             x_train = x_train[idx, :, :, :]
             ytrain_data = self.Y_train[idx];
@@ -129,11 +131,11 @@ class Trainer(Utils):
             epoch_acc = 0
             epoch_loss = 0
 
-            iters = int(DATASET_SIZE / BATCH_SIZE)
+            iters = int(DATASET_SIZE / batch_size)
             for i in range(iters):
                 ## linear data frame icinde `BATCH_SIZE` stride seklinde atlayarak gider
-                batch_start = i * BATCH_SIZE
-                batch_end = min(batch_start + BATCH_SIZE, DATASET_SIZE)
+                batch_start = i * batch_size
+                batch_end = min(batch_start + batch_size, DATASET_SIZE)
                 ## data frame sonunda `BATCH_SIZE`'dan daha az data ise
                 ## last data almayi garantilemek icin konulmustur
                 actual_batch_size = batch_end - batch_start
