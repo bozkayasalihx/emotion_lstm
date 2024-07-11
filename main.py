@@ -8,7 +8,7 @@ from utils import Utils, EMOTIONS, EMOTION_INTENSITY
 from model import loss_function, EmotionLSTM
 from train import Trainer
 
-def gradio_trainer(epochs: int, batch_size: int, lr: float, data_path: List[str]):
+def trainer(epochs: int, batch_size: int, lr: float, data_path: List[str]):
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
     model = EmotionLSTM(num_of_emotions=len(EMOTIONS))

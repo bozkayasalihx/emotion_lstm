@@ -1,0 +1,10 @@
+#+title: NOTES
+
+- NUMBER OF EMOTIONS
+
+** hyper parameters
+- SAMPLE RATE not sure about it
+- EPOCH SIZE
+- BATCH SIZE
+- LEARNING RATE (lr)
+- RATIO (how much of data should train, test and validation), that should be percentage
