@@ -5,28 +5,24 @@ class EmotionLSTM(nn.Module):
     def __init__(self, num_of_emotions):
         super().__init__()
         self.conv2Dblock = nn.Sequential(
-            ### 1. conv2d block
             nn.Conv2d(in_channels=1,out_channels=16,kernel_size=3,stride=1, padding=1,),
             nn.BatchNorm2d(16),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Dropout(p=0.3),
             
-            ### 2. conv2d block
             nn.Conv2d( in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=4, stride=4),
             nn.Dropout(p=0.3),
 
-            # 3. conv block
             nn.Conv2d( in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1,),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=4, stride=4),
             nn.Dropout(p=0.3),
 
-            # 4. conv block
             nn.Conv2d( in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1,),
             nn.BatchNorm2d(64),
             nn.ReLU(),
